@@ -1008,4 +1008,27 @@ class UDS_TesterPresentSender(PeriodicSenderThread):
         PeriodicSenderThread.__init__(self, sock, pkt, interval)
 
 
+def UDSServiceEnumerator(sock):
+    pkts = [UDS(service=x) for x in set(x & ~0x40 for x in range(0x100))]
+    found_services = [sock.sr1(p, timeout=0.5, verbose=False) for p in pkts]
+    return [p for p in found_services if
+            p.service != 0x7f or
+            p.negativeResponseCode not in [0x10, 0x11, 0x12]]
+
+
+def __getTableEntry(pkt):
+    if pkt.service == 0x7f:
+        return ("ResponseCode",
+                "0x%02x: %s" % (pkt.requestServiceId,
+                                pkt[1].get_field('requestServiceId')
+                                .i2s[pkt.requestServiceId]),
+                pkt[1].get_field('negativeResponseCode').
+                i2s[pkt.negativeResponseCode])
+    else:
+        return ("ResponseCode",
+                "0x%02x: %s" % (pkt.service & ~0x40,
+                                pkt.get_field('service').
+                                i2s[pkt.service & ~0x40]),
+                "PositiveResponse")
+
 
